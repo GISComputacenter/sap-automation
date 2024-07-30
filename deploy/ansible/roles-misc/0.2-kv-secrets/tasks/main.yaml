@@ -1,0 +1,73 @@
+# /*---------------------------------------------------------------------------8
+# |                                                                            |
+# |                         Key Vault helpers                                  |
+# |                                                                            |
+# +------------------------------------4--------------------------------------*/
+---
+# -------------------------------------+---------------------------------------8
+#
+# Task: 0.2     - kv-secrets
+#
+# -------------------------------------+---------------------------------------8
+
+# -------------------------------------+---------------------------------------8
+#
+# <Comment Header>
+#
+# -------------------------------------+---------------------------------------8
+
+# -------------------------------------+---------------------------------------8
+#
+# Show parameters used for cluster aware coding
+#
+# -------------------------------------+---------------------------------------8
+- name:                                   "Cluster aware code..."
+  ansible.builtin.debug:
+    msg:                                    # Best method for formatting output with Azure Devops Logs
+                                            - "operation:                       {{ operation }}"
+                                            - "database_high_availability:      {{ database_high_availability }}"
+                                            - "database_cluster_type:           {{ database_cluster_type }}"
+                                            - "scs_high_availability:           {{ scs_high_availability }}"
+                                            - "scs_cluster_type:                {{ scs_cluster_type }}"
+                                            - "use_msi_for_clusters:            {{ use_msi_for_clusters }}"
+                                            - "platform:                        {{ platform | upper }}"
+    verbosity:                              2
+  when:                                   operation == "fencing"
+
+# -------------------------------------+---------------------------------------8
+#
+# -------------------------------------+---------------------------------------8
+- name:                                   "0.2 Key Vault: - Import S User tasks"
+  ansible.builtin.import_tasks:           "s_user.yaml"
+  when:
+                                          - operation == "SoftwareAcquisition"
+
+
+# -------------------------------------+---------------------------------------8
+#
+# -------------------------------------+---------------------------------------8
+- name:                                   "0.2 Key Vault: - Import Fencing secrets"
+  ansible.builtin.import_tasks:           "fencing.yaml"
+  when:
+                                          - operation == "fencing"
+                                          - (database_high_availability and database_cluster_type == "AFA") or
+                                            (scs_high_availability      and      scs_cluster_type == "AFA")         # AFA (Azure Fencing Agent)
+                                          - not use_msi_for_clusters
+
+
+# -------------------------------------+---------------------------------------8
+#
+# -------------------------------------+---------------------------------------8
+- name:                                   "0.2 Key Vault: - Import witness account detials"
+  ansible.builtin.import_tasks:           "wincluster-witness.yaml"
+  # TODO: update when clause more appropriately
+  when:
+                                          - operation == "fencing"
+                                          - (scs_high_availability or database_high_availability)
+                                          - not use_msi_for_clusters
+                                          - platform | upper == "SQLSERVER"
+
+# /*---------------------------------------------------------------------------8
+# |                                   END                                      |
+# +------------------------------------4--------------------------------------*/
+...
